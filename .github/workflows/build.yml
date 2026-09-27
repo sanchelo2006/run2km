@@ -5,6 +5,10 @@ on:
     branches: [ main ]
   workflow_dispatch:
 
+defaults:
+  run:
+    working-directory: run2km-android
+
 jobs:
   build:
     runs-on: ubuntu-24.04
@@ -22,6 +26,7 @@ jobs:
           java-version: '17'
 
       - name: Install Gradle 8.7
+        working-directory: .
         run: |
           wget -q https://services.gradle.org/distributions/gradle-8.7-bin.zip -O /tmp/gradle.zip
           unzip -q /tmp/gradle.zip -d /opt
@@ -29,11 +34,9 @@ jobs:
 
       - name: Prepare Android SDK
         run: |
-          echo "SDK location: $ANDROID_HOME"
           SDKMANAGER=$(find $ANDROID_HOME/cmdline-tools -name sdkmanager -type f 2>/dev/null | head -1)
-          echo "sdkmanager: $SDKMANAGER"
           yes | "$SDKMANAGER" --licenses 2>/dev/null || true
-          "$SDKMANAGER" "platforms;android-34" "build-tools;34.0.0" "platform-tools" 2>/dev/null || true
+          "$SDKMANAGER" "platforms;android-34" "platform-tools" 2>/dev/null || true
           echo "sdk.dir=$ANDROID_HOME" > local.properties
 
       - name: Remove stub wrapper
@@ -46,5 +49,5 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: app-debug
-          path: app/build/outputs/apk/debug/app-debug.apk
+          path: run2km-android/app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
