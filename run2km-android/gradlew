@@ -1,5 +1,0 @@
-#!/bin/sh
-# Gradle wrapper stub — замени на настоящий wrapper при первой сборке
-# Если Android Studio открывает проект — он сам сгенерирует wrapper.
-echo "Gradle wrapper не сгенерирован. Откройте проект в Android Studio — она сгенерирует wrapper автоматически."
-echo "Или запустите: gradle wrapper --gradle-version 8.7"
