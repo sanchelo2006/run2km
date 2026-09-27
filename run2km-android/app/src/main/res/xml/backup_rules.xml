@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
+<full-backup-content>
+    <!-- Не бэкапим ничего лишнего — прогресс хранится в WebView localStorage -->
+</full-backup-content>

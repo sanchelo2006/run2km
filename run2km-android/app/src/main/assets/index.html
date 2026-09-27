@@ -1,0 +1,960 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta name="theme-color" content="#4d6bfe">
+    <title>2 км за 11 минут</title>
+    <style>
+        :root {
+            --accent: #4d6bfe;
+            --accent-soft: #eef1ff;
+            --bg: #ffffff;
+            --surface: #ffffff;
+            --text: #0d0d0d;
+            --text-dim: #6b7280;
+            --border: #e5e5e5;
+            --border-strong: #d1d5db;
+            --ok: #16a34a;
+            --ok-soft: #ecfdf5;
+            --warn: #f59e0b;
+            --bad: #dc2626;
+            --bad-soft: #fef2f2;
+        }
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        html, body { margin: 0; padding: 0; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            font-size: 16px;
+            line-height: 1.5;
+            padding-bottom: calc(72px + env(safe-area-inset-bottom));
+            -webkit-font-smoothing: antialiased;
+            overscroll-behavior-y: contain;
+        }
+        header {
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            background: rgba(255, 255, 255, 0.92);
+            backdrop-filter: saturate(180%) blur(12px);
+            -webkit-backdrop-filter: saturate(180%) blur(12px);
+            border-bottom: 1px solid var(--border);
+            padding: 12px 16px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding-top: calc(12px + env(safe-area-inset-top));
+        }
+        header h1 { font-size: 17px; margin: 0; font-weight: 600; letter-spacing: -0.01em; }
+        header .meta { font-size: 12px; color: var(--text-dim); font-variant-numeric: tabular-nums; }
+        main { max-width: 640px; margin: 0 auto; padding: 16px; }
+        .screen { display: none; animation: fade 0.2s ease; }
+        .screen.active { display: block; }
+        @keyframes fade {
+            from { opacity: 0; transform: translateY(4px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .tabbar {
+            position: fixed;
+            bottom: 0; left: 0; right: 0;
+            z-index: 20;
+            display: flex;
+            background: rgba(255, 255, 255, 0.96);
+            backdrop-filter: saturate(180%) blur(12px);
+            -webkit-backdrop-filter: saturate(180%) blur(12px);
+            border-top: 1px solid var(--border);
+            padding-bottom: env(safe-area-inset-bottom);
+        }
+        .tabbar button {
+            flex: 1;
+            border: 0;
+            background: transparent;
+            padding: 8px 4px;
+            font-size: 11px;
+            color: var(--text-dim);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 2px;
+            cursor: pointer;
+            font-family: inherit;
+            transition: color 0.15s;
+        }
+        .tabbar button .ico { font-size: 20px; line-height: 1; }
+        .tabbar button.active { color: var(--accent); font-weight: 600; }
+        .card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 12px;
+        }
+        .card.tight { padding: 12px; }
+        .card h2 { font-size: 15px; margin: 0 0 8px; font-weight: 600; letter-spacing: -0.01em; }
+        .muted { color: var(--text-dim); font-size: 13px; }
+        .week {
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            margin-bottom: 10px;
+            overflow: hidden;
+            background: var(--surface);
+            transition: border-color 0.15s;
+        }
+        .week.open { border-color: var(--accent); }
+        .week-head {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 14px 16px;
+            cursor: pointer;
+            user-select: none;
+        }
+        .week-num {
+            width: 36px; height: 36px;
+            border-radius: 10px;
+            background: var(--accent-soft);
+            color: var(--accent);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 15px;
+            flex-shrink: 0;
+        }
+        .week.unload .week-num { background: #f3f4f6; color: var(--text-dim); }
+        .week-info { flex: 1; min-width: 0; }
+        .week-info .t { font-weight: 600; font-size: 14px; }
+        .week-info .s { font-size: 12px; color: var(--text-dim); }
+        .week-progress { font-size: 12px; color: var(--text-dim); font-variant-numeric: tabular-nums; flex-shrink: 0; }
+        .week-body { display: none; padding: 0 16px 14px; border-top: 1px solid var(--border); }
+        .week.open .week-body { display: block; }
+        .wo {
+            display: flex;
+            gap: 12px;
+            padding: 12px 0;
+            border-bottom: 1px solid var(--border);
+            align-items: flex-start;
+        }
+        .wo:last-child { border-bottom: 0; }
+        .wo-check {
+            width: 24px; height: 24px;
+            border-radius: 7px;
+            border: 2px solid var(--border-strong);
+            background: #fff;
+            flex-shrink: 0;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: transparent;
+            font-size: 15px;
+            font-weight: 700;
+            transition: all 0.15s;
+            margin-top: 1px;
+        }
+        .wo-check.done { background: var(--accent); border-color: var(--accent); color: #fff; }
+        .wo-body { flex: 1; min-width: 0; }
+        .wo-day { font-size: 11px; font-weight: 700; color: var(--accent); text-transform: uppercase; letter-spacing: 0.04em; }
+        .wo-title { font-size: 14px; font-weight: 600; margin: 2px 0; }
+        .wo.done .wo-title { text-decoration: line-through; color: var(--text-dim); }
+        .wo-detail { font-size: 12px; color: var(--text-dim); }
+        .wo-timer-btn {
+            border: 1px solid var(--border-strong);
+            background: #fff;
+            color: var(--accent);
+            border-radius: 8px;
+            padding: 4px 10px;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            font-family: inherit;
+            margin-top: 6px;
+        }
+        .wo-timer-btn:active { background: var(--accent-soft); }
+        .display { text-align: center; padding: 24px 16px; }
+        .display .phase {
+            font-size: 13px;
+            font-weight: 700;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            color: var(--text-dim);
+            margin-bottom: 6px;
+        }
+        .display .phase.work { color: var(--accent); }
+        .display .phase.rest { color: var(--warn); }
+        .display .time {
+            font-size: 76px;
+            font-weight: 700;
+            letter-spacing: -0.03em;
+            font-variant-numeric: tabular-nums;
+            line-height: 1;
+            margin: 6px 0;
+        }
+        .display .rep { font-size: 14px; color: var(--text-dim); font-variant-numeric: tabular-nums; }
+        .btn {
+            border: 0;
+            border-radius: 12px;
+            padding: 14px 20px;
+            font-size: 16px;
+            font-weight: 600;
+            font-family: inherit;
+            cursor: pointer;
+            transition: transform 0.05s, opacity 0.15s;
+            background: var(--accent);
+            color: #fff;
+            width: 100%;
+        }
+        .btn:active { transform: scale(0.985); opacity: 0.9; }
+        .btn.outline { background: #fff; color: var(--accent); border: 1.5px solid var(--accent); }
+        .btn.ghost { background: #fff; color: var(--text); border: 1px solid var(--border-strong); }
+        .btn-row { display: flex; gap: 10px; }
+        .btn-row .btn { width: auto; flex: 1; }
+        .presets { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
+        .preset {
+            border: 1px solid var(--border);
+            background: #fff;
+            border-radius: 10px;
+            padding: 10px 12px;
+            text-align: left;
+            cursor: pointer;
+            font-family: inherit;
+            font-size: 13px;
+            color: var(--text);
+            transition: border-color 0.15s;
+        }
+        .preset:active, .preset.active { border-color: var(--accent); background: var(--accent-soft); }
+        .preset .n { font-weight: 600; display: block; margin-bottom: 2px; }
+        .preset .d { font-size: 11px; color: var(--text-dim); }
+        .lap {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 10px 12px;
+            border-radius: 10px;
+            margin-bottom: 6px;
+            background: #fafafa;
+            border: 1px solid var(--border);
+            font-variant-numeric: tabular-nums;
+        }
+        .lap.done { background: var(--ok-soft); border-color: #bbf7d0; }
+        .lap.behind { background: var(--bad-soft); border-color: #fecaca; }
+        .lap .lbl { font-size: 13px; font-weight: 600; }
+        .lap .target { font-size: 11px; color: var(--text-dim); }
+        .lap .actual { font-size: 15px; font-weight: 700; }
+        .info-h { font-size: 15px; font-weight: 600; margin: 20px 0 8px; }
+        .info-h:first-child { margin-top: 0; }
+        table.zone { width: 100%; border-collapse: collapse; font-size: 13px; }
+        table.zone th, table.zone td { text-align: left; padding: 8px 6px; border-bottom: 1px solid var(--border); }
+        table.zone th {
+            font-weight: 600;
+            color: var(--text-dim);
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.03em;
+        }
+        table.zone td.num { font-variant-numeric: tabular-nums; font-weight: 600; }
+        ul.clean { margin: 6px 0; padding-left: 18px; font-size: 14px; }
+        ul.clean li { margin: 4px 0; }
+        input[type="text"], input[type="date"], input[type="number"] {
+            width: 100%;
+            border: 1px solid var(--border-strong);
+            border-radius: 10px;
+            padding: 11px 12px;
+            font-size: 15px;
+            font-family: inherit;
+            background: #fff;
+            color: var(--text);
+            font-variant-numeric: tabular-nums;
+        }
+        input:focus {
+            outline: none;
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px var(--accent-soft);
+        }
+        label.fld {
+            display: block;
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--text-dim);
+            margin: 8px 0 4px;
+        }
+        .test-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px 0;
+            border-bottom: 1px solid var(--border);
+            font-variant-numeric: tabular-nums;
+            font-size: 14px;
+        }
+        .test-row:last-child { border-bottom: 0; }
+        .test-row .t-val { font-weight: 700; }
+        .test-row .t-val.ok { color: var(--ok); }
+        .test-row .t-val.slow { color: var(--bad); }
+        .chip {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: 600;
+            background: var(--accent-soft);
+            color: var(--accent);
+        }
+        .empty { text-align: center; padding: 24px 16px; color: var(--text-dim); font-size: 13px; }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>2 км за 11:00</h1>
+        <span class="meta" id="headerMeta">5:30/км</span>
+    </header>
+
+    <main>
+        <section class="screen active" id="screen-program">
+            <div class="card tight">
+                <div style="display:flex;justify-content:space-between;align-items:center;">
+                    <div>
+                        <div style="font-weight:600;font-size:14px;" id="overallTitle">Прогресс программы</div>
+                        <div class="muted" id="overallSub">0 из 32 тренировок выполнено</div>
+                    </div>
+                    <span class="chip" id="overallPct">0%</span>
+                </div>
+                <div style="height:8px;background:#f3f4f6;border-radius:4px;margin-top:10px;overflow:hidden;">
+                    <div id="overallBar" style="height:100%;width:0;background:var(--accent);border-radius:4px;transition:width 0.4s;"></div>
+                </div>
+            </div>
+            <div id="weeks"></div>
+        </section>
+
+        <section class="screen" id="screen-timer">
+            <div class="card" style="padding:0;">
+                <div class="display">
+                    <div class="phase" id="timerPhase">Готов</div>
+                    <div class="time" id="timerTime">--:--</div>
+                    <div class="rep" id="timerRep">Выберите тренировку</div>
+                </div>
+            </div>
+            <div class="btn-row" style="margin-bottom:12px;">
+                <button class="btn" id="timerStart">Старт</button>
+                <button class="btn ghost" id="timerReset">Сброс</button>
+            </div>
+            <div class="info-h">Быстрый выбор</div>
+            <div class="presets" id="presets"></div>
+            <div class="info-h">Свои параметры</div>
+            <div class="card">
+                <label class="fld">Работа, сек</label>
+                <input type="number" id="customWork" value="122" min="5">
+                <label class="fld">Отдых, сек</label>
+                <input type="number" id="customRest" value="90" min="0">
+                <label class="fld">Повторов</label>
+                <input type="number" id="customReps" value="6" min="1">
+                <div style="margin-top:12px;">
+                    <button class="btn outline" id="customApply">Применить</button>
+                </div>
+            </div>
+        </section>
+
+        <section class="screen" id="screen-race">
+            <div class="card" style="padding:0;">
+                <div class="display">
+                    <div class="phase work" id="racePhase">Готов к забегу</div>
+                    <div class="time" id="raceTime">00:00</div>
+                    <div class="rep" id="raceInfo">5 кругов по 400 м · цель 2:12</div>
+                </div>
+            </div>
+            <div class="btn-row" style="margin-bottom:16px;">
+                <button class="btn" id="raceStart">Старт</button>
+                <button class="btn outline" id="raceLap">Круг</button>
+                <button class="btn ghost" id="raceReset">Сброс</button>
+            </div>
+            <div class="card tight" style="margin-bottom:12px;">
+                <div style="font-size:12px;font-weight:600;color:var(--text-dim);text-transform:uppercase;letter-spacing:0.04em;margin-bottom:4px;">Целевая раскладка</div>
+                <div style="font-size:13px;">Ровно 2:12 на каждый 400-м круг = 11:00. Первый круг не быстрее 2:14, последний — всё, что осталось.</div>
+            </div>
+            <div id="raceLaps"></div>
+        </section>
+
+        <section class="screen" id="screen-info">
+            <div class="card">
+                <h2>Тренировочные зоны</h2>
+                <table class="zone">
+                    <thead><tr><th>Зона</th><th>Темп</th><th>Назначение</th></tr></thead>
+                    <tbody>
+                        <tr><td><b>E</b></td><td class="num">6:30–7:00</td><td>база, 80% объёма</td></tr>
+                        <tr><td><b>T</b> (ПАНО)</td><td class="num">5:35</td><td>порог</td></tr>
+                        <tr><td><b>I</b> (МПК)</td><td class="num">5:05</td><td>VO₂max</td></tr>
+                        <tr><td><b>R</b></td><td class="num">4:40</td><td>скорость</td></tr>
+                    </tbody>
+                </table>
+                <div class="muted" style="margin-top:10px;">Принцип 80/20: 80% объёма — легко, 20% — тяжело. Не бегайте «средне» каждый раз.</div>
+            </div>
+            <div class="card">
+                <h2>Техника</h2>
+                <ul class="clean">
+                    <li>Вертикальный корпус с лёгким наклоном вперёд</li>
+                    <li>Взгляд вперёд, подбородок не задран</li>
+                    <li>Плечи расслаблены, руки ~90°</li>
+                    <li>Постановка стопы ближе к центру тяжести</li>
+                    <li>Каденс 170–180 шагов/мин</li>
+                </ul>
+            </div>
+            <div class="card">
+                <h2>Питание и разминка</h2>
+                <ul class="clean">
+                    <li><b>За 2–3 ч:</b> лёгкие углеводы (банан, овсянка)</li>
+                    <li><b>За 1 ч:</b> 200–300 мл воды</li>
+                    <li><b>Разминка 15 мин:</b> 5 мин бега + суставная гимнастика + 4×60 м ускорений</li>
+                    <li><b>Без статической растяжки</b> до старта</li>
+                    <li><b>После:</b> 10 мин трусцы + белок в течение часа</li>
+                </ul>
+            </div>
+            <div class="card">
+                <h2>Типичные ошибки</h2>
+                <ul class="clean">
+                    <li>Слишком быстрый старт на первых 400 м</li>
+                    <li>Игнорирование разгрузочных недель</li>
+                    <li>Отсутствие ОФП</li>
+                    <li>Бег в «серой зоне» каждую тренировку</li>
+                    <li>Рост объёма &gt; +10% в неделю</li>
+                </ul>
+            </div>
+            <div class="card">
+                <h2>Контрольные тесты (1 км)</h2>
+                <div class="muted" style="margin-bottom:10px;">Каждые 2 недели — тестовый забег на 1 км на свежих ногах. Цель — быстрее 5:25.</div>
+                <label class="fld">Дата</label>
+                <input type="date" id="testDate">
+                <label class="fld">Время (мм:сс)</label>
+                <input type="text" id="testTime" placeholder="5:20" inputmode="numeric">
+                <div style="margin-top:12px;">
+                    <button class="btn outline" id="testAdd">Добавить результат</button>
+                </div>
+                <div id="testList" style="margin-top:14px;"></div>
+            </div>
+            <div class="card">
+                <h2>Красные флаги</h2>
+                <div class="muted">Боль в колене, голени или ахилле, которая не проходит за 2 дня → 3–4 дня полного отдыха, затем лёгкий бег. Не «дотерпеть».</div>
+            </div>
+        </section>
+    </main>
+
+    <nav class="tabbar" id="tabbar">
+        <button data-tab="program" class="active"><span class="ico">📅</span>Программа</button>
+        <button data-tab="timer"><span class="ico">⏱️</span>Таймер</button>
+        <button data-tab="race"><span class="ico">🎯</span>Забег</button>
+        <button data-tab="info"><span class="ico">ℹ️</span>Справка</button>
+    </nav>
+
+    <script>
+    'use strict';
+
+    const PROGRAM = [
+        { week: 1, title: 'Вкатка', volume: 15, type: 'load', workouts: [
+            { id: 'w1-1', day: 'Пн', title: '6×400 м в I', detail: '2:02 через 200 м трусцой', timer: { label: '400 м в I', work: 122, rest: 90, reps: 6 } },
+            { id: 'w1-2', day: 'Ср', title: '4 км лёгкий бег', detail: '6:30–7:00/км · зона E' },
+            { id: 'w1-3', day: 'Пт', title: '3 км E + 4×1 мин T', detail: '5:35/км через 1 мин E', timer: { label: '1 мин в T', work: 60, rest: 60, reps: 4 } },
+            { id: 'w1-4', day: 'Вс', title: '6 км лёгкий бег', detail: '6:30–7:00/км · зона E' }
+        ]},
+        { week: 2, title: 'База', volume: 18, type: 'load', workouts: [
+            { id: 'w2-1', day: 'Пн', title: '8×400 м в I', detail: '2:02 через 200 м трусцой', timer: { label: '400 м в I', work: 122, rest: 90, reps: 8 } },
+            { id: 'w2-2', day: 'Ср', title: '5 км лёгкий бег', detail: '6:30–7:00/км · зона E' },
+            { id: 'w2-3', day: 'Пт', title: '2 км в T', detail: '5:35/км непрерывно', timer: { label: '2 км в T', work: 670, rest: 0, reps: 1 } },
+            { id: 'w2-4', day: 'Вс', title: '7 км лёгкий бег', detail: '6:30–7:00/км · зона E' }
+        ]},
+        { week: 3, title: 'Развитие', volume: 20, type: 'load', workouts: [
+            { id: 'w3-1', day: 'Пн', title: '5×800 м в I', detail: '4:04 через 400 м трусцой', timer: { label: '800 м в I', work: 244, rest: 180, reps: 5 } },
+            { id: 'w3-2', day: 'Ср', title: '5 км лёгкий бег', detail: '6:30–7:00/км · зона E' },
+            { id: 'w3-3', day: 'Пт', title: '3×1 км в T', detail: '5:35 через 1 мин E', timer: { label: '1 км в T', work: 335, rest: 60, reps: 3 } },
+            { id: 'w3-4', day: 'Вс', title: '8 км лёгкий бег', detail: '6:30–7:00/км · зона E' }
+        ]},
+        { week: 4, title: 'Разгрузка', volume: 13, type: 'unload', workouts: [
+            { id: 'w4-1', day: 'Пн', title: '6×400 м в R', detail: '1:52 через 400 м трусцой', timer: { label: '400 м в R', work: 112, rest: 180, reps: 6 } },
+            { id: 'w4-2', day: 'Ср', title: '4 км лёгкий бег', detail: '6:30–7:00/км · зона E' },
+            { id: 'w4-3', day: 'Пт', title: '2 км E + 3×200 м R', detail: '200 м за 56 с', timer: { label: '200 м в R', work: 56, rest: 90, reps: 3 } },
+            { id: 'w4-4', day: 'Вс', title: '6 км лёгкий бег', detail: '6:30–7:00/км · зона E' }
+        ]},
+        { week: 5, title: 'Специфика', volume: 21, type: 'load', workouts: [
+            { id: 'w5-1', day: 'Пн', title: '6×800 м в I', detail: '4:04 через 400 м трусцой', timer: { label: '800 м в I', work: 244, rest: 180, reps: 6 } },
+            { id: 'w5-2', day: 'Ср', title: '6 км лёгкий бег', detail: '6:30–7:00/км · зона E' },
+            { id: 'w5-3', day: 'Пт', title: '4×1 км в T', detail: '5:35 через 1 мин E', timer: { label: '1 км в T', work: 335, rest: 60, reps: 4 } },
+            { id: 'w5-4', day: 'Вс', title: '8 км лёгкий бег', detail: '6:30–7:00/км · зона E' }
+        ]},
+        { week: 6, title: 'Специфика+', volume: 22, type: 'load', workouts: [
+            { id: 'w6-1', day: 'Пн', title: '3×1000 м в I', detail: '5:05 через 400 м трусцой', timer: { label: '1000 м в I', work: 305, rest: 180, reps: 3 } },
+            { id: 'w6-2', day: 'Ср', title: '6 км лёгкий бег', detail: '6:30–7:00/км · зона E' },
+            { id: 'w6-3', day: 'Пт', title: '5 км в T', detail: '5:35/км непрерывно', timer: { label: '5 км в T', work: 1675, rest: 0, reps: 1 } },
+            { id: 'w6-4', day: 'Вс', title: '9 км лёгкий бег', detail: '6:30–7:00/км · зона E' }
+        ]},
+        { week: 7, title: 'Пик формы', volume: 20, type: 'load', workouts: [
+            { id: 'w7-1', day: 'Пн', title: '4×800 м в I + 4×200 м R', detail: '4:04 · затем 56 с', timer: { label: '800 м в I', work: 244, rest: 180, reps: 4 } },
+            { id: 'w7-2', day: 'Ср', title: '5 км лёгкий бег', detail: '6:30–7:00/км · зона E' },
+            { id: 'w7-3', day: 'Пт', title: 'Пробный забег 2 км', detail: 'На свежих ногах · целевой темп' },
+            { id: 'w7-4', day: 'Вс', title: '6 км лёгкий бег', detail: '6:30–7:00/км · зона E' }
+        ]},
+        { week: 8, title: 'Подводка', volume: 11, type: 'unload', workouts: [
+            { id: 'w8-1', day: 'Пн', title: '4×400 м в I', detail: '2:02 через 400 м трусцой', timer: { label: '400 м в I', work: 122, rest: 180, reps: 4 } },
+            { id: 'w8-2', day: 'Ср', title: '3 км E + 4×30 с', detail: 'Ускорения, коротко' },
+            { id: 'w8-3', day: 'Пт', title: '2 км E + 3×200 м R', detail: '200 м за 56 с', timer: { label: '200 м в R', work: 56, rest: 90, reps: 3 } },
+            { id: 'w8-4', day: 'Вс', title: '🎯 ЗАБЕГ 2 КМ', detail: 'Цель: 11:00 · темп 5:30/км' }
+        ]}
+    ];
+
+    const PRESETS = [
+        { n: '6×400 м в I', d: '2:02 / отдых 1:30', work: 122, rest: 90, reps: 6 },
+        { n: '8×400 м в I', d: '2:02 / отдых 1:30', work: 122, rest: 90, reps: 8 },
+        { n: '5×800 м в I', d: '4:04 / отдых 3:00', work: 244, rest: 180, reps: 5 },
+        { n: '3×1000 м в I', d: '5:05 / отдых 3:00', work: 305, rest: 180, reps: 3 },
+        { n: '6×400 м в R', d: '1:52 / отдых 3:00', work: 112, rest: 180, reps: 6 },
+        { n: '3×200 м в R', d: '0:56 / отдых 1:30', work: 56, rest: 90, reps: 3 },
+        { n: '4×1 мин в T', d: 'работа/отдых 1:1', work: 60, rest: 60, reps: 4 },
+        { n: '3×1 км в T', d: '5:35 / отдых 1:00', work: 335, rest: 60, reps: 3 }
+    ];
+
+    const TOTAL_WORKOUTS = PROGRAM.reduce((s, w) => s + w.workouts.length, 0);
+    const LS = { done: 'run2km_done', tests: 'run2km_tests' };
+
+    function loadDone() {
+        try { return JSON.parse(localStorage.getItem(LS.done) || '{}'); }
+        catch (e) { return {}; }
+    }
+    function saveDone(d) { try { localStorage.setItem(LS.done, JSON.stringify(d)); } catch (e) {} }
+    function loadTests() {
+        try { return JSON.parse(localStorage.getItem(LS.tests) || '[]'); }
+        catch (e) { return []; }
+    }
+    function saveTests(t) { try { localStorage.setItem(LS.tests, JSON.stringify(t)); } catch (e) {} }
+
+    let doneState = loadDone();
+
+    function fmt(sec) {
+        sec = Math.max(0, Math.round(sec));
+        const m = Math.floor(sec / 60);
+        const s = sec % 60;
+        return String(m).padStart(2, '0') + ':' + String(s).padStart(2, '0');
+    }
+
+    function beep(freq, dur) {
+        try {
+            const Ctx = window.AudioContext || window.webkitAudioContext;
+            if (!Ctx) return;
+            if (!window.__actx) window.__actx = new Ctx();
+            const ctx = window.__actx;
+            if (ctx.state === 'suspended') ctx.resume();
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.type = 'sine';
+            osc.frequency.value = freq || 880;
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+            const t = ctx.currentTime;
+            gain.gain.setValueAtTime(0.0001, t);
+            gain.gain.exponentialRampToValueAtTime(0.35, t + 0.01);
+            gain.gain.exponentialRampToValueAtTime(0.0001, t + (dur || 0.2));
+            osc.start(t);
+            osc.stop(t + (dur || 0.2) + 0.02);
+        } catch (e) {}
+    }
+
+    function vibrate(pattern) {
+        try { if (navigator.vibrate) navigator.vibrate(pattern); } catch (e) {}
+    }
+
+    const tabs = document.querySelectorAll('#tabbar button');
+    const screens = document.querySelectorAll('.screen');
+    tabs.forEach(btn => {
+        btn.addEventListener('click', () => {
+            const tab = btn.dataset.tab;
+            tabs.forEach(b => b.classList.toggle('active', b === btn));
+            screens.forEach(s => s.classList.toggle('active', s.id === 'screen-' + tab));
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        });
+    });
+
+    function switchTab(name) {
+        const btn = document.querySelector('#tabbar button[data-tab="' + name + '"]');
+        if (btn) btn.click();
+    }
+
+    function renderProgram() {
+        const wrap = document.getElementById('weeks');
+        wrap.innerHTML = '';
+        PROGRAM.forEach((w, idx) => {
+            const total = w.workouts.length;
+            const done = w.workouts.filter(x => doneState[x.id]).length;
+            const el = document.createElement('div');
+            el.className = 'week ' + w.type + (idx === 0 ? ' open' : '');
+            el.dataset.week = String(w.week);
+
+            let woHtml = '';
+            w.workouts.forEach(x => {
+                const isDone = !!doneState[x.id];
+                woHtml += '<div class="wo ' + (isDone ? 'done' : '') + '" data-wo="' + x.id + '">' +
+                    '<div class="wo-check ' + (isDone ? 'done' : '') + '" data-check="' + x.id + '">✓</div>' +
+                    '<div class="wo-body">' +
+                        '<div class="wo-day">' + x.day + '</div>' +
+                        '<div class="wo-title">' + x.title + '</div>' +
+                        '<div class="wo-detail">' + x.detail + '</div>' +
+                        (x.timer ? '<button class="wo-timer-btn" data-timer="' + x.id + '">▶ Запустить таймер</button>' : '') +
+                    '</div>' +
+                '</div>';
+            });
+
+            el.innerHTML =
+                '<div class="week-head" data-toggle="' + w.week + '">' +
+                    '<div class="week-num">' + w.week + '</div>' +
+                    '<div class="week-info">' +
+                        '<div class="t">' + w.title + '</div>' +
+                        '<div class="s">' + w.volume + ' км · ' + w.workouts.length + ' тренировки</div>' +
+                    '</div>' +
+                    '<div class="week-progress">' + done + '/' + total + '</div>' +
+                '</div>' +
+                '<div class="week-body">' + woHtml + '</div>';
+
+            wrap.appendChild(el);
+        });
+
+        wrap.querySelectorAll('[data-toggle]').forEach(h => {
+            h.addEventListener('click', () => h.parentElement.classList.toggle('open'));
+        });
+
+        wrap.querySelectorAll('[data-check]').forEach(c => {
+            c.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const id = c.dataset.check;
+                if (doneState[id]) delete doneState[id];
+                else doneState[id] = new Date().toISOString();
+                saveDone(doneState);
+                renderProgram();
+                updateOverall();
+                vibrate(10);
+            });
+        });
+
+        wrap.querySelectorAll('[data-timer]').forEach(b => {
+            b.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const id = b.dataset.timer;
+                const wo = findWorkout(id);
+                if (wo && wo.timer) {
+                    applyPreset(wo.timer);
+                    switchTab('timer');
+                }
+            });
+        });
+    }
+
+    function findWorkout(id) {
+        for (const w of PROGRAM) {
+            for (const x of w.workouts) {
+                if (x.id === id) return x;
+            }
+        }
+        return null;
+    }
+
+    function updateOverall() {
+        const done = Object.keys(doneState).length;
+        const pct = Math.round(done / TOTAL_WORKOUTS * 100);
+        document.getElementById('overallSub').textContent = done + ' из ' + TOTAL_WORKOUTS + ' тренировок выполнено';
+        document.getElementById('overallPct').textContent = pct + '%';
+        document.getElementById('overallBar').style.width = pct + '%';
+    }
+
+    const timerState = {
+        running: false, phase: 'idle', remaining: 0, rep: 0,
+        totalReps: 0, workSec: 0, restSec: 0, label: '',
+        tick: null, lastTick: 0
+    };
+
+    function applyPreset(p) {
+        timerState.running = false;
+        timerState.phase = 'idle';
+        timerState.workSec = p.work;
+        timerState.restSec = p.rest || 0;
+        timerState.totalReps = p.reps;
+        timerState.rep = 0;
+        timerState.remaining = p.work;
+        timerState.label = p.label || 'Тренировка';
+        if (timerState.tick) { clearInterval(timerState.tick); timerState.tick = null; }
+        renderTimer();
+    }
+
+    function renderTimer() {
+        const phaseEl = document.getElementById('timerPhase');
+        const timeEl = document.getElementById('timerTime');
+        const repEl = document.getElementById('timerRep');
+
+        if (timerState.phase === 'idle') {
+            phaseEl.textContent = 'Готов';
+            phaseEl.className = 'phase';
+            timeEl.textContent = fmt(timerState.remaining || 0);
+            repEl.textContent = timerState.label ? timerState.label + ' · ' + timerState.totalReps + ' повторов' : 'Выберите тренировку';
+        } else if (timerState.phase === 'work') {
+            phaseEl.textContent = 'Работа';
+            phaseEl.className = 'phase work';
+            timeEl.textContent = fmt(timerState.remaining);
+            repEl.textContent = 'Повтор ' + timerState.rep + ' из ' + timerState.totalReps + ' · ' + timerState.label;
+        } else if (timerState.phase === 'rest') {
+            phaseEl.textContent = 'Отдых';
+            phaseEl.className = 'phase rest';
+            timeEl.textContent = fmt(timerState.remaining);
+            repEl.textContent = 'Повтор ' + timerState.rep + ' из ' + timerState.totalReps + ' выполнен';
+        } else if (timerState.phase === 'done') {
+            phaseEl.textContent = 'Готово';
+            phaseEl.className = 'phase';
+            timeEl.textContent = '00:00';
+            repEl.textContent = 'Все ' + timerState.totalReps + ' повторов выполнены';
+        }
+    }
+
+    function timerStep() {
+        if (!timerState.running) return;
+        const now = Date.now();
+        const dt = (now - timerState.lastTick) / 1000;
+        timerState.lastTick = now;
+        timerState.remaining -= dt;
+
+        if (timerState.remaining <= 0) {
+            if (timerState.phase === 'work') {
+                beep(880, 0.25);
+                vibrate([200, 100, 200]);
+                if (timerState.rep >= timerState.totalReps) {
+                    timerState.phase = 'done';
+                    timerState.running = false;
+                    clearInterval(timerState.tick);
+                    timerState.tick = null;
+                    renderTimer();
+                    return;
+                }
+                if (timerState.restSec > 0) {
+                    timerState.phase = 'rest';
+                    timerState.remaining = timerState.restSec;
+                } else {
+                    timerState.rep++;
+                    timerState.phase = 'work';
+                    timerState.remaining = timerState.workSec;
+                }
+            } else if (timerState.phase === 'rest') {
+                beep(660, 0.25);
+                vibrate(200);
+                timerState.rep++;
+                timerState.phase = 'work';
+                timerState.remaining = timerState.workSec;
+            }
+        }
+        renderTimer();
+    }
+
+    function timerStart() {
+        if (timerState.running) {
+            timerState.running = false;
+            clearInterval(timerState.tick);
+            timerState.tick = null;
+            document.getElementById('timerStart').textContent = 'Продолжить';
+            return;
+        }
+        if (timerState.phase === 'done') {
+            applyPreset({
+                work: timerState.workSec, rest: timerState.restSec,
+                reps: timerState.totalReps, label: timerState.label
+            });
+        }
+        if (timerState.phase === 'idle') {
+            timerState.phase = 'work';
+            timerState.rep = 1;
+            timerState.remaining = timerState.workSec;
+        }
+        beep(1, 0.01);
+        timerState.running = true;
+        timerState.lastTick = Date.now();
+        document.getElementById('timerStart').textContent = 'Пауза';
+        timerState.tick = setInterval(timerStep, 100);
+        renderTimer();
+    }
+
+    function timerReset() {
+        timerState.running = false;
+        if (timerState.tick) clearInterval(timerState.tick);
+        timerState.tick = null;
+        timerState.phase = 'idle';
+        timerState.rep = 0;
+        timerState.remaining = timerState.workSec || 0;
+        document.getElementById('timerStart').textContent = 'Старт';
+        renderTimer();
+    }
+
+    document.getElementById('timerStart').addEventListener('click', timerStart);
+    document.getElementById('timerReset').addEventListener('click', timerReset);
+
+    function renderPresets() {
+        const wrap = document.getElementById('presets');
+        wrap.innerHTML = '';
+        PRESETS.forEach(p => {
+            const b = document.createElement('button');
+            b.className = 'preset';
+            b.innerHTML = '<span class="n">' + p.n + '</span><span class="d">' + p.d + '</span>';
+            b.addEventListener('click', () => {
+                document.querySelectorAll('.preset').forEach(x => x.classList.remove('active'));
+                b.classList.add('active');
+                applyPreset({ label: p.n, work: p.work, rest: p.rest, reps: p.reps });
+                document.getElementById('timerStart').textContent = 'Старт';
+            });
+            wrap.appendChild(b);
+        });
+    }
+
+    document.getElementById('customApply').addEventListener('click', () => {
+        const w = Math.max(5, parseInt(document.getElementById('customWork').value, 10) || 60);
+        const r = Math.max(0, parseInt(document.getElementById('customRest').value, 10) || 0);
+        const n = Math.max(1, parseInt(document.getElementById('customReps').value, 10) || 1);
+        document.querySelectorAll('.preset').forEach(x => x.classList.remove('active'));
+        applyPreset({ label: 'Своя тренировка', work: w, rest: r, reps: n });
+        document.getElementById('timerStart').textContent = 'Старт';
+    });
+
+    const raceState = {
+        running: false, start: 0, laps: [], tick: null, lastLapStart: 0
+    };
+    const RACE_TARGETS = [132, 132, 132, 132, 132];
+
+    function renderRaceLaps() {
+        const wrap = document.getElementById('raceLaps');
+        wrap.innerHTML = '';
+        for (let i = 0; i < 5; i++) {
+            const done = raceState.laps[i];
+            const el = document.createElement('div');
+            let actualStr = '—';
+            let cls = '';
+            if (done) {
+                actualStr = fmt(done.split);
+                const diff = done.split - RACE_TARGETS[i];
+                cls = diff > 3 ? 'behind' : 'done';
+            }
+            el.className = 'lap ' + cls;
+            el.innerHTML =
+                '<div>' +
+                    '<div class="lbl">Круг ' + (i + 1) + '</div>' +
+                    '<div class="target">цель ' + fmt(RACE_TARGETS[i]) + '</div>' +
+                '</div>' +
+                '<div class="actual">' + actualStr + '</div>';
+            wrap.appendChild(el);
+        }
+    }
+
+    function raceTick() {
+        if (!raceState.running) return;
+        const elapsed = (Date.now() - raceState.start) / 1000;
+        document.getElementById('raceTime').textContent = fmt(elapsed);
+    }
+
+    document.getElementById('raceStart').addEventListener('click', () => {
+        if (raceState.running) {
+            raceState.running = false;
+            clearInterval(raceState.tick);
+            raceState.tick = null;
+            document.getElementById('raceStart').textContent = 'Продолжить';
+            return;
+        }
+        if (raceState.start === 0) {
+            raceState.start = Date.now();
+            raceState.lastLapStart = Date.now();
+            beep(1, 0.01);
+        } else {
+            const parts = document.getElementById('raceTime').textContent.split(':');
+            const elapsed = parseFloat(parts[0]) * 60 + parseFloat(parts[1]);
+            raceState.start = Date.now() - elapsed * 1000;
+        }
+        raceState.running = true;
+        document.getElementById('raceStart').textContent = 'Пауза';
+        raceState.tick = setInterval(raceTick, 100);
+        document.getElementById('racePhase').textContent = 'Бежим';
+    });
+
+    document.getElementById('raceLap').addEventListener('click', () => {
+        if (!raceState.running) return;
+        if (raceState.laps.length >= 5) return;
+        const now = Date.now();
+        const split = (now - raceState.lastLapStart) / 1000;
+        raceState.lastLapStart = now;
+        raceState.laps.push({ split: split });
+        beep(880, 0.15);
+        vibrate(80);
+        renderRaceLaps();
+        if (raceState.laps.length === 5) {
+            raceState.running = false;
+            clearInterval(raceState.tick);
+            raceState.tick = null;
+            document.getElementById('racePhase').textContent = 'Финиш!';
+            document.getElementById('raceStart').textContent = 'Старт';
+            const total = raceState.laps.reduce((s, l) => s + l.split, 0);
+            document.getElementById('raceInfo').textContent = 'Итог: ' + fmt(total) + ' · цель 11:00';
+            beep(660, 0.4);
+            vibrate([300, 100, 300, 100, 300]);
+        } else {
+            document.getElementById('raceInfo').textContent = 'Круг ' + raceState.laps.length + ' из 5';
+        }
+    });
+
+    document.getElementById('raceReset').addEventListener('click', () => {
+        raceState.running = false;
+        if (raceState.tick) clearInterval(raceState.tick);
+        raceState.tick = null;
+        raceState.start = 0;
+        raceState.lastLapStart = 0;
+        raceState.laps = [];
+        document.getElementById('raceStart').textContent = 'Старт';
+        document.getElementById('racePhase').textContent = 'Готов к забегу';
+        document.getElementById('raceTime').textContent = '00:00';
+        document.getElementById('raceInfo').textContent = '5 кругов по 400 м · цель 2:12';
+        renderRaceLaps();
+    });
+
+    function renderTests() {
+        const tests = loadTests();
+        const wrap = document.getElementById('testList');
+        if (!tests.length) {
+            wrap.innerHTML = '<div class="empty">Пока нет результатов.<br>Первый тест — через 2 недели после старта.</div>';
+            return;
+        }
+        const sorted = tests.slice().sort((a, b) => (b.date || '').localeCompare(a.date || ''));
+        wrap.innerHTML = sorted.map(t => {
+            let cls = '';
+            const sec = t.seconds;
+            if (sec && sec < 325) cls = 'ok';
+            else if (sec && sec > 345) cls = 'slow';
+            return '<div class="test-row">' +
+                '<span>' + (t.date || '—') + '</span>' +
+                '<span class="t-val ' + cls + '">' + (t.time || '—') + '</span>' +
+            '</div>';
+        }).join('');
+    }
+
+    document.getElementById('testAdd').addEventListener('click', () => {
+        const date = document.getElementById('testDate').value || new Date().toISOString().slice(0, 10);
+        const time = document.getElementById('testTime').value.trim();
+        const m = time.match(/^(\d{1,2}):(\d{2})$/);
+        if (!m) {
+            alert('Введите время в формате мм:сс, например 5:20');
+            return;
+        }
+        const seconds = parseInt(m[1], 10) * 60 + parseInt(m[2], 10);
+        const tests = loadTests();
+        tests.push({ date: date, time: time, seconds: seconds });
+        saveTests(tests);
+        document.getElementById('testTime').value = '';
+        renderTests();
+    });
+
+    function init() {
+        renderProgram();
+        updateOverall();
+        renderPresets();
+        renderRaceLaps();
+        renderTests();
+        document.getElementById('testDate').value = new Date().toISOString().slice(0, 10);
+    }
+
+    init();
+    </script>
+</body>
+</html>
